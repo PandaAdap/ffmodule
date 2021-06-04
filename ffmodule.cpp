@@ -94,14 +94,6 @@ MediaInfo ffmodule::GetMediaInfo(std::string inputfile)
     return ret;
 }
 
-ReturnInfo ffmodule::Transcode(std::string input, std::string output)
-{
-	//Demuxing->Decode->Encode->Muxing
-	ReturnInfo ret;
-	
-    return ret;
-}
-
 ReturnInfo ffmodule::Frame2PNG(AVFrame* pFrame, std::string out_file)
 {
 	ReturnInfo ret;
@@ -832,7 +824,7 @@ end:
 	return ret;
 }
 
-ReturnInfo ffmodule::ComposeVideo(std::string images_input, std::string outfile, std::string codec, int bitrate, int framerate)
+ReturnInfo ffmodule::ComposeVideo(std::string images_input, std::string outfile, std::string codec, AVPixelFormat pix_fmt, int bitrate, int framerate)
 {
 	ReturnInfo ret;						//Return information.
 
@@ -894,9 +886,24 @@ ReturnInfo ffmodule::ComposeVideo(std::string images_input, std::string outfile,
 	enc_ctx->sample_aspect_ratio = { 1 , 1 };
 	/* take first format from list of supported formats */
 	if (encoder->pix_fmts)
+	{
+		const enum AVPixelFormat* p;
+		for (p = encoder->pix_fmts; *p != -1; p++)
+		{
+			if (*p == pix_fmt)
+			{
+				enc_ctx->pix_fmt = *p;
+				break;
+			}
+		}
 		enc_ctx->pix_fmt = encoder->pix_fmts[0];
+	}
 	else
-		enc_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+	{
+		ret.ret_str = "Pixel format not found.";
+		ret.ret_code = -1;
+		goto end;
+	}
 	/* video time_base can be set to whatever is handy and supported by encoder */
 	enc_ctx->time_base = av_inv_q({ framerate , 1 });
 
@@ -962,7 +969,7 @@ ReturnInfo ffmodule::ComposeVideo(std::string images_input, std::string outfile,
 				AVFrame* yuvFrame = av_frame_alloc();
 				yuvFrame->width = frm[compose_frm]->width;
 				yuvFrame->height = frm[compose_frm]->height;
-				yuvFrame->format = AV_PIX_FMT_YUV420P;
+				yuvFrame->format = enc_ctx->pix_fmt;// AV_PIX_FMT_YUV420P;
 
 				struct SwsContext* swCtx = sws_getContext(
 					frm[compose_frm]->width,
@@ -970,10 +977,10 @@ ReturnInfo ffmodule::ComposeVideo(std::string images_input, std::string outfile,
 					AVPixelFormat(frm[compose_frm]->format),
 					frm[compose_frm]->width,
 					frm[compose_frm]->height,
-					AV_PIX_FMT_YUV420P,
+					enc_ctx->pix_fmt,//AV_PIX_FMT_YUV420P,
 					SWS_GAUSS, 0, 0, 0);
 
-				av_image_alloc(yuvFrame->data, yuvFrame->linesize, frm[compose_frm]->width, frm[compose_frm]->height, AV_PIX_FMT_YUV420P, 1);
+				av_image_alloc(yuvFrame->data, yuvFrame->linesize, frm[compose_frm]->width, frm[compose_frm]->height, enc_ctx->pix_fmt, 1);
 				sws_scale(swCtx, frm[compose_frm]->data, frm[compose_frm]->linesize, 0, frm[compose_frm]->height, yuvFrame->data, yuvFrame->linesize);
 
 				yuvFrame->pts = frame - (frm.size() - 1 - compose_frm);

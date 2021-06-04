@@ -48,6 +48,20 @@ extern "C" {
 #pragma comment(lib, "postproc.lib")
 #pragma comment(lib, "swscale.lib")
 
+/**
+Encoder.
+*/
+#define Encodec_libx264		"libx264"		//H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (codec h264)
+#define Encodec_h264_nvenc	"h264_nvenc"	//NVIDIA NVENC H.264 encoder (codec h264)
+#define Encodec_h264_qsv	"h264_qsv"		//H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (Intel Quick Sync Video acceleration) (codec h264)
+#define Encodec_libx265		"libx265"		//H.265 / HEVC (codec hevc)
+#define Encodec_hevc_nvenc	"hevc_nvenc"	//NVIDIA NVENC hevc encoder (codec hevc)
+#define Encodec_hevc_qsv	"hevc_qsv"		//HEVC (Intel Quick Sync Video acceleration) (codec hevc)
+#define Encodec_prores		"prores"		//Apple ProRes
+#define Encodec_prores_aw	"prores_aw"		//Apple ProRes (codec prores)
+#define Encodec_prores_ks	"prores_ks"		//Apple ProRes (iCodec Pro) (codec prores)
+
+
 static std::string string_format(const char* format, ...)
 {
 	char buff[1024] = { 0 };
@@ -138,8 +152,6 @@ public:
 	*/
 	MediaInfo GetMediaInfo(std::string inputfile);
 
-	ReturnInfo Transcode(std::string input, std::string output);
-
 	/**
 	* Convert AVFrame to PNG file.
 	*
@@ -215,9 +227,11 @@ public:
 	* @param outfile - Path and file name to save media composed.
 	* 
 	* @param codec - Video encoder.
-	*				 (Support libx264, libx265, nvenc, nvenc_hevc, h264_qsv, hevc_qsv)
 	*				 The availability of the encoder depends on your hardware platform.
 	*
+	* @param codec - Pixel format.
+	*				 The availability of the pixel format depends on the encoder you chose.
+	* 
 	* @param bitrate - Video bitrate.
 	* 
 	* @param framerate - Video frame rate.
@@ -225,7 +239,7 @@ public:
 	* @return Code 0 on success, a negative value on failure, string return information.
 	*
 	*/
-	ReturnInfo ComposeVideo(std::string images_input, std::string outfile, std::string codec, int bitrate, int framerate);
+	ReturnInfo ComposeVideo(std::string images_input, std::string outfile, std::string codec, AVPixelFormat pix_fmt, int bitrate, int framerate);
 
 	/**
 	* Compose audio and video.
@@ -240,6 +254,7 @@ public:
 	*
 	*/
 	ReturnInfo ComposeAudio(std::string video_input, std::string audio_input, std::string output);
+
 
 private:
 
